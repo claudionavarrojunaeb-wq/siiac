@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
 interface TokenState {
@@ -6,30 +6,27 @@ interface TokenState {
 }
 
 export default function EstudianteForm() {
-  const [solicitudId, setSolicitudId] = useState<string | null>(null);
-
   const location = useLocation();
 
-  useEffect(() => {
+  const solicitudId = useMemo<string | null>(() => {
     const state = location.state as TokenState | null;
     const fromState = state?.__tokenParams?.solicitudid;
-    if (fromState) {
-      setSolicitudId(fromState);
-      return;
-    }
+    if (fromState) return fromState;
 
     const params = new URLSearchParams(window.location.search);
     let id = params.get("solicitudid");
     if (!id) {
       try {
-        const last = sessionStorage.getItem('last_params');
+        const last = sessionStorage.getItem("last_params");
         if (last) {
           const obj = JSON.parse(last);
           id = obj?.solicitudid ?? id;
         }
-      } catch {}
+      } catch (err) {
+        void err;
+      }
     }
-    setSolicitudId(id);
+    return id ?? null;
   }, [location]);
 
   return (
