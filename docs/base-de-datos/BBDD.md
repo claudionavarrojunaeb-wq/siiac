@@ -8,36 +8,36 @@ esquema: public
 
 Listado de tablas
 
-| # | table_schema | table_name | column_name | data_type | is_nullable |
-|---:|---|---|---|---|---|
-| 1  |public      |archderiva          |solicitudid                   |integer                    |NO         |
-| 2  |public      |archderiva          |archderivaid                  |integer                    |NO         |
-| 3  |public      |archderiva          |archderivaattach              |bytea                      |YES        |
-| 4  |public      |archderiva          |archderivanombre              |character                  |YES        |
-| 5  |public      |archderiva          |archderivaext                 |character                  |YES        |
-| 6  |public      |archentrega         |solicitud_id                  |integer                    |NO         |
-| 7  |public      |archentrega         |archentregaid                 |smallint                   |NO         |
-| 8  |public      |archentrega         |archentregaattach             |bytea                      |YES        |
-| 9  |public      |archentrega         |archentreganombre             |character                  |YES        |
-| 10 |public      |archentrega         |archentregaext                |character                  |YES        |
-| 11 |public      |archivos            |archivosid                    |integer                    |NO         |
-| 12 |public      |archivos            |solicitudid                   |integer                    |YES        |
-| 13 |public      |archivos            |usuario_id                    |character                  |YES        |
-| 14 |public      |archivos            |archivospath                  |character                  |YES        |
-| 15 |public      |archivos            |archivosfecha                 |timestamp without time zone|YES        |
-| 16 |public      |archivos            |archivosidentificador         |integer                    |YES        |
-| 17 |public      |archivosfap         |solicitudfapid                |integer                    |NO         |
-| 18 |public      |archivosfap         |archivosfapid                 |smallint                   |NO         |
-| 19 |public      |archivosfap         |archivosfapattach             |bytea                      |YES        |
-| 20 |public      |archivosfap         |archivosfapnombre             |character                  |YES        |
-| 21 |public      |archivosfap         |archivosfapext                |character                  |YES        |
-| 22 |public      |area                |areaid                        |smallint                   |NO         |
-| 23 |public      |area                |areadescripcion               |character                  |YES        |
-| 24 |public      |area                |areahabilitado                |smallint                   |YES        |
-| 25 |public      |areafap             |areafapid                     |smallint                   |NO         |
-| 26 |public      |areafap             |areafapdescripcion            |character                  |YES        |
-| 27 |public      |areafap             |areafaphabilitado             |smallint                   |YES        |
-| 28 |public      |auditor             |auditorid                     |integer                    |NO         |
+| # | table_name | column_name | data_type | is_nullable | column_default |
+|---|---|---|---|---|---|
+1  |archderiva          |solicitudid                   |integer                    |NO         |              |
+2  |archderiva          |archderivaid                  |integer                    |NO         |              |
+3  |archderiva          |archderivaattach              |bytea                      |YES        |              |
+4  |archderiva          |archderivanombre              |character                  |YES        |              |
+5  |archderiva          |archderivaext                 |character                  |YES        |              |
+6  |archentrega         |solicitud_id                  |integer                    |NO         |              |
+7  |archentrega         |archentregaid                 |smallint                   |NO         |              |
+8  |archentrega         |archentregaattach             |bytea                      |YES        |              |
+9  |archentrega         |archentreganombre             |character                  |YES        |              |
+10 |archentrega         |archentregaext                |character                  |YES        |              |
+11 |archivos            |archivosid                    |integer                    |NO         |              |
+12 |archivos            |solicitudid                   |integer                    |YES        |              |
+13 |archivos            |usuario_id                    |character                  |YES        |              |
+14 |archivos            |archivospath                  |character                  |YES        |              |
+15 |archivos            |archivosfecha                 |timestamp without time zone|YES        |              |
+16 |archivos            |archivosidentificador         |integer                    |YES        |              |
+17 |archivosfap         |solicitudfapid                |integer                    |NO         |              |
+18 |archivosfap         |archivosfapid                 |smallint                   |NO         |              |
+19 |archivosfap         |archivosfapattach             |bytea                      |YES        |              |
+20 |archivosfap         |archivosfapnombre             |character                  |YES        |              |
+21 |archivosfap         |archivosfapext                |character                  |YES        |              |
+22 |area                |areaid                        |smallint                   |NO         |              |
+23 |area                |areadescripcion               |character                  |YES        |              |
+24 |area                |areahabilitado                |smallint                   |YES        |              |
+25 |areafap             |areafapid                     |smallint                   |NO         |              |
+26 |areafap             |areafapdescripcion            |character                  |YES        |              |
+27 |areafap             |areafaphabilitado             |smallint                   |YES        |              |
+28 |auditor             |auditorid                     |integer                    |NO         |              |
 | 29 |public      |auditor             |solicitudid                   |integer                    |YES        |
 | 30 |public      |auditor             |auditorfecha                  |timestamp without time zone|YES        |
 | 31 |public      |auditor             |estado_id                     |smallint                   |YES        |
