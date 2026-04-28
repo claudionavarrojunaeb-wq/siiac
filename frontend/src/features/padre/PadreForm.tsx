@@ -5,8 +5,6 @@ interface TokenState {
   __tokenParams?: Record<string, string>;
 }
 
-// Formulario para `Padre/Madre/Apoderado`.
-// Muestra el `solicitudid` pasado por query para confirmar continuidad del flujo.
 export default function PadreForm() {
   const location = useLocation();
   const solicitudId = useMemo(() => {

@@ -22,8 +22,11 @@ Regla: actualizar la copia global únicamente desde la versión en el repositori
 - Ser preciso y rápido en las respuestas concisas.
 
 - Para cualquier cambio en el workspace, registrar en log actual los archivos creados o modificados y una descripción exacta de lo realizado (rutas relativas y breve propósito).
-
 - Registrar cada instrucción o solicitud explícita del usuario en el archivo de log activo (`log/aaaammdd.md`) como una observación inmediata. Formato requerido para la observación:
+
+- Por cada archivo `.tsx` o `.js` del repositorio debe existir un archivo Markdown con el mismo nombre (por ejemplo `Componente.tsx.md`). En ese Markdown se copiará el código fuente completo y se añadirá una explicación detallada que describa qué hace cada función, variable, constante, bucle `for`, condicional `if`, expresiones `await`, llamadas `fetch`, y otros elementos relevantes; las explicaciones deben ser suficientemente detalladas para estudiar el código. Al actualizar cualquier archivo fuente `.tsx` o `.js`, su correspondiente `.md` debe actualizarse para reflejar los cambios.
+
+ - Registrar cada instrucción o solicitud explícita del usuario en el archivo de log activo (`log/aaaammdd.md`) como una observación inmediata. Formato requerido para la observación:
 
 	- `- YYYY-MM-DD HH:MM:SS Dev solicita: <texto de la solicitud>`
 
@@ -48,7 +51,7 @@ Flujo de edición:
 
 Convenciones operativas adicionales:
 
-- Mantener codificación UTF-8 en todos los archivos dentro de `log/`.
+- Mantener codificación UTF-8 en todos los archivos del proyecto
 
 ## Referencias y buenas prácticas
 - Leer siempre `log/index.md` y luego las tres últimas sesiones (en orden descendente) al iniciar una nueva tarea para recuperar contexto.

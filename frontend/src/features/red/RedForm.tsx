@@ -5,8 +5,6 @@ interface TokenState {
   __tokenParams?: Record<string, string>;
 }
 
-// Formulario para `Red Colaboradora`.
-// Lee y muestra `solicitudid` proporcionado por la pantalla anterior.
 export default function RedForm() {
   const location = useLocation();
   const solicitudId = useMemo(() => {

@@ -5,8 +5,6 @@ interface TokenState {
   __tokenParams?: Record<string, string>;
 }
 
-// Formulario para el tipo `Otro`.
-// Lee `solicitudid` desde la query string y lo presenta en pantalla.
 export default function OtroForm() {
   const location = useLocation();
   const solicitudId = useMemo(() => {
