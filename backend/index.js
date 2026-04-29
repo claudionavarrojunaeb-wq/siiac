@@ -113,3 +113,90 @@ app.post("/api/solicitud", async (request, response) => {
     response.status(500).json({ message: "Error al crear la solicitud." });
   }
 });
+
+// Catálogos usados por el formulario de estudiante
+app.get("/api/sexo", async (_req, res) => {
+  try {
+    const q = `select sexoid as id, sexodescripcion as nombre from public.sexo order by sexoid`; 
+    const r = await pool.query(q);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/sexo", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/genero", async (_req, res) => {
+  try {
+    const q = `select generoid as id, generodescripcion as nombre from public.genero order by generoid`;
+    const r = await pool.query(q);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/genero", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/edad", async (_req, res) => {
+  try {
+    const q = `select edadid as id, edaddescripcion as nombre from public.edad order by edadid`;
+    const r = await pool.query(q);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/edad", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/pueblos", async (_req, res) => {
+  try {
+    const q = `select pueblosid as id, pueblosdescripcion as nombre from public.pueblos order by pueblosid`;
+    const r = await pool.query(q);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/pueblos", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/pais", async (_req, res) => {
+  try {
+    const q = `select paisid as id, paisdescripcion as nombre from public.pais order by paisdescripcion`;
+    const r = await pool.query(q);
+    res.json(r.rows.map(rw => ({ id: String(rw.id), nombre: rw.nombre })));
+  } catch (err) {
+    console.error("Error /api/pais", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/region", async (_req, res) => {
+  try {
+    const q = `select regionid as id, regiondescripcion as nombre from public.region order by regionid`;
+    const r = await pool.query(q);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/region", err);
+    res.status(500).json([]);
+  }
+});
+
+app.get("/api/comunas", async (req, res) => {
+  try {
+    const regionId = req.query.regionId;
+    if (!regionId) return res.status(400).json({ message: "regionId required" });
+
+    const q = `
+      select c.comunaid as id, c.comunadescripcion as nombre
+      from public.corepa c
+      join public.provincia p on c.provinciaid = p.provinciaid
+      where p.regionid = $1
+      order by c.comunadescripcion
+    `;
+    const r = await pool.query(q, [regionId]);
+    res.json(r.rows);
+  } catch (err) {
+    console.error("Error /api/comunas", err);
+    res.status(500).json([]);
+  }
+});

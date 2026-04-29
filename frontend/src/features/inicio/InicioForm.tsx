@@ -32,6 +32,7 @@ const routeMap: Record<number, string> = {
 export default function InicioForm() {
   const selectId = useId();
   const navigate = useNavigate();
+  const otherDetailId = useId();
 
   const [selectedUserType, setSelectedUserType] = useState("");
   const [campaignHtml, setCampaignHtml] = useState("");
@@ -164,45 +165,55 @@ export default function InicioForm() {
         </p>
 
         <form onSubmit={handleSubmit}>
-          <div className="max-w-xl mx-auto text-center">
-            <label className="block text-black mb-2">Seleccione el tipo de usuario/a:</label>
+          <div className="max-w-xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-2 md:gap-4">
+              <label htmlFor={selectId} className="text-black md:text-right md:pr-2">Seleccione el tipo de usuario/a:</label>
 
-            <select
-              id={selectId}
-              value={selectedUserType}
-              onChange={(e) => setSelectedUserType(e.target.value)}
-              className="mx-auto block w-80 border border-gray-300 rounded px-3 py-2 focus:outline-none"
-              style={{ outlineColor: COLOR_CAMPAIGN, color: 'rgb(85,85,85)' }}
-            >
-              <option value="">- Seleccione el tipo de usuario/a -</option>
-              {citizenTypeOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              <div className="flex justify-center md:justify-start">
+                <select
+                  id={selectId}
+                  value={selectedUserType}
+                  onChange={(e) => setSelectedUserType(e.target.value)}
+                  className="w-full md:w-80 border border-gray-300 rounded px-3 py-2 focus:outline-none"
+                  style={{ outlineColor: COLOR_CAMPAIGN, color: 'rgb(85,85,85)' }}
+                >
+                  <option value="">- Seleccione el tipo de usuario/a -</option>
+                  {citizenTypeOptions.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {Number(selectedUserType) === 4 && (
-              <div className="mt-4 max-w-xl mx-auto text-left">
-                <label className="block text-gray-700 mb-2">Detalle tipo de usuario/a:</label>
-                <input
-                  aria-label="Detalle otro"
-                  placeholder="Ingrese tipo de usuario/a"
-                  value={otherDetail}
-                  onChange={(e) => setOtherDetail(e.target.value)}
-                  className="block w-80 mx-auto border border-gray-300 rounded px-3 py-2 bg-white text-black"
-                />
-                <div className="mt-4">
+              <div className="mt-4 max-w-xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-2 md:gap-4">
+                  <label htmlFor={otherDetailId} className="text-black md:text-right md:pr-2">Detalle tipo de usuario/a:</label>
+
+                  <div className="flex justify-center md:justify-start">
+                    <input
+                      id={otherDetailId}
+                      aria-label="Detalle otro"
+                      placeholder="Ingrese tipo de usuario/a"
+                      value={otherDetail}
+                      onChange={(e) => setOtherDetail(e.target.value)}
+                      className="w-full md:w-80 border border-gray-300 rounded px-3 py-2 bg-white text-black"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600 bg-gray-100 p-3 rounded">(Otros usuarios como: empresa, familiar, otra institución, fundación, etc.)</p>
                 </div>
               </div>
             )}
 
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center">
               <button
                 type="submit"
                 disabled={isNextDisabled || isSubmitting}
-                className={`px-6 py-2 rounded text-white ${isNextDisabled || isSubmitting ? 'bg-purple-300' : ''}`}
+                className={`w-40 px-6 py-2 rounded-lg shadow-sm font-medium text-sm text-white ${isNextDisabled || isSubmitting ? 'bg-purple-300' : ''}`}
                 style={!isNextDisabled && !isSubmitting ? { backgroundColor: COLOR_CAMPAIGN } : undefined}
               >
                 {isSubmitting ? "Enviando..." : "Siguiente"}

@@ -1,102 +1,81 @@
 # Documentación detallada de frontend/src/features/estudiante/EstudianteForm.tsx
 
-## Código fuente
+Este documento describe la implementación actual del componente `EstudianteForm.tsx`,
+sus validaciones y los endpoints del backend que consume.
 
-```tsx
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+## Resumen
 
-interface TokenState {
-  __tokenParams?: Record<string, string>;
-}
+- `EstudianteForm.tsx` muestra el identificador de la solicitud (`solicitudId`) y
+  contiene el formulario de datos del estudiante (Parte 1). El formulario usa
+  campos controlados con `useState`, carga catálogos desde el backend y valida
+  todos los campos al presionar `Siguiente`. Los campos inválidos reciben el
+  fondo `rgb(255,192,192)` según el requerimiento.
 
-// Este componente representa el formulario específico para `Estudiante`.
-// Objetivo: leer `solicitudid` desde la query string y mostrarlo en la vista.
-export default function EstudianteForm() {
-  // `solicitudId` mantiene el valor obtenido de la URL. Se muestra en pantalla
-  // para confirmar que el flujo desde `InicioForm.tsx` pasó correctamente el id.
-  const [solicitudId, setSolicitudId] = useState<string | null>(null);
+## Endpoints usados (backend)
 
-  const location = useLocation();
+- `GET /api/sexo` → devuelve lista de objetos `{ id, nombre }` desde tabla `sexo`.
+- `GET /api/genero` → devuelve `{ id, nombre }` desde tabla `genero`.
+- `GET /api/edad` → devuelve `{ id, nombre }` desde tabla `edad`.
+- `GET /api/pueblos` → devuelve `{ id, nombre }` desde tabla `pueblos`.
+- `GET /api/pais` → devuelve `{ id, nombre }` desde tabla `pais`.
+- `GET /api/region` → devuelve `{ id, nombre }` desde tabla `region`.
+- `GET /api/comunas?regionId=<regionId>` → devuelve comunas (`corepa`) filtradas
+  por `regionId` (se hace `JOIN` con `provincia` para aplicar el filtro).
 
-  useEffect(() => {
-    // Primero intentar leer desde location.state (oculto por token)
-    const state = location.state as TokenState | null;
-    const fromState = state?.__tokenParams?.solicitudid;
-    if (fromState) {
-      setSolicitudId(fromState);
-      return;
-    }
+Estas rutas fueron añadidas en `backend/index.js` y devuelven JSON arrays con los
+campos `id` y `nombre` (tal como los consume el formulario en el frontend).
 
-    // Fallback: leer la query string si existe
-    const params = new URLSearchParams(window.location.search);
-    let id = params.get("solicitudid");
-    // Último recurso: leer desde sessionStorage si existe (back/forward cases)
-    if (!id) {
-      try {
-        const last = sessionStorage.getItem('last_params');
-        if (last) {
-          const obj = JSON.parse(last);
-          id = obj?.solicitudid ?? id;
-        }
-      } catch {}
-    }
-    setSolicitudId(id);
-  }, [location]);
+## Comportamiento del formulario
 
-  return (
-    <main className="p-6">
-      <h1 className="mb-4 text-xl font-bold">Formulario - Estudiante</h1>
-      <p className="mb-2">Identificador de solicitud recibido:</p>
-      <pre className="rounded border bg-gray-50 p-3">{solicitudId ?? "(no provisto)"}</pre>
-    </main>
-  );
-}
+- Campos incluidos (todos obligatorios):
+  - `Rut estudiante`: se formatea al perder foco y se valida con algoritmo DV.
+  - `Nombres` (máx. 100)
+  - `Primer Apellido` (máx. 50)
+  - `Segundo Apellido` (máx. 50)
+  - `Sexo` (select desde `/api/sexo`)
+  - `Género` (select desde `/api/genero`)
+  - `Edad` (select desde `/api/edad`)
+  - `Teléfono / Celular` (valida con `^(\\+56)?\\s?9\\d{8}$` o `^(\\+56)?\\s?\\d{9}$`)
+  - `Correo Electrónico` (valida formato básico `^\\S+@\\S+\\.\\S+$`)
+  - `Repita Correo Electrónico` (debe coincidir con el anterior)
+  - `Nacionalidad` (radio: `Chilena` / `Extranjero`)
+    - Si `Chilena`: aparece `Perteneciente a Pueblos Originarios` (select `/api/pueblos`).
+    - Si `Extranjero`: aparece `País` (select `/api/pais`). Si se elige `Otro`, aparece
+      el input `Ingrese su país`.
+  - `Región de Residencia` (select `/api/region`)
+  - `Comuna de Residencia` (select `/api/comunas?regionId=...`) — se recarga al cambiar región.
+  - `Institución de Educación` (máx. 100)
 
-```
+- Validación: al presionar `Siguiente` se ejecuta `validateAll()` que marca los
+  campos inválidos en el objeto `invalid`. La interfaz aplica `bg-[rgb(255,192,192)]`
+  y `border-red-500` a los campos listados en `invalid`.
 
-## Explicación detallada
+## Puntos técnicos y decisiones
 
-- Resumen: Componente React que forma parte del flujo de formularios del frontend.
+- Formato y validación de RUT:
+  - `formatRut(value)` limpia caracteres no válidos, inserta puntos y guion, y
+    conserva la K si corresponde.
+  - `validateRut(rut)` implementa el algoritmo módulo 11 para comprobar el DV.
 
-**Importaciones:**
-- import { useEffect, useState } from "react";
-- import { useLocation } from "react-router-dom";
+- Carga de catálogos:
+  - El componente realiza `fetch` a los endpoints señalados arriba en `useEffect`.
+  - Si la llamada falla, el select queda vacío y la validación marcará el campo
+    como inválido hasta que se seleccione un valor.
 
-**Declaraciones top-level (const/let/var):**
-- const [solicitudId, setSolicitudId]
-- const location
-- const state
-- const fromState
-- const params
-- let id
-- const last
-- const obj
+- Filtrado de comunas por región:
+  - Cuando cambia `region` se solicita `/api/comunas?regionId=...` que internamente
+    hace `JOIN` entre `corepa` y `provincia` para filtrar por `regionid`.
 
-**Funciones / Componentes exportados:**
-- `EstudianteForm`: componente o función exportada.
+## Integración y pasos siguientes recomendados
 
-**Estructuras de control detectadas:**
-- `await` usos: 0
-- `fetch(...)` usos: 0
-- bucles `for`: 0
-- condicionales `if`: 3
-- bloques `try/catch`: 1
+- Estilado: el componente usa clases Tailwind; adapte utilidades o tema si su
+  proyecto usa una configuración Tailwind diferente.
+- Localización/labels: si requiere textos en otro idioma o ajustes en accesibilidad,
+  actualice los `label` y atributos `aria-` según necesidad.
+- Persistencia: en `handleSubmit` actualmente se construye `payload` y se hace
+  `console.log`. Puede enviar `payload` a la ruta `/api/solicitud` (ya existente)
+  o a otra ruta de su preferencia para persistir los datos.
 
-**Hooks y APIs de React detectadas:**
-- useEffect
-- useState
-- useLocation
-- useState
-- useLocation
-- useEffect
+## Registro de cambios
 
-## Desglose por componente/función
-
-### `EstudianteForm`
-- Tipo: Componente React funcional.
-- Puntos clave encontrados en el cuerpo:
-  - Usa `useEffect` para efectos secundarios (cargas iniciales, suscripciones).
-
----
-Nota: Esta explicación fue generada automáticamente. Puede editarse para añadir más contexto específico o ejemplos.
+- 2026-04-29: Actualizada documentación para reflejar implementación del formulario y los endpoints añadidos en `backend/index.js`.
