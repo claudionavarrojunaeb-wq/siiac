@@ -9,6 +9,8 @@ interface TokenState {
 export default function EstudianteForm() {
   const location = useLocation();
 
+  const FORM_NAME = "EstudianteForm.tsx";
+
   const solicitudId = useMemo<string | null>(() => {
     const state = location.state as TokenState | null;
     const fromState = state?.__tokenParams?.solicitudid;
@@ -40,13 +42,15 @@ export default function EstudianteForm() {
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
   const [email2, setEmail2] = useState("");
-  const [nacionalidad, setNacionalidad] = useState("Chilena");
+  // Usar códigos para nacionalidad: "1" = Chilena, "2" = Extranjero
+  const [nacionalidad, setNacionalidad] = useState("1");
   const [pueblo, setPueblo] = useState("");
   const [pais, setPais] = useState("");
   const [paisOtro, setPaisOtro] = useState("");
   const [region, setRegion] = useState("");
   const [comuna, setComuna] = useState("");
   const [institucion, setInstitucion] = useState("");
+  const [cuidador, setCuidador] = useState<string | undefined>(undefined);
 
   type Option = { id: string; nombre: string };
   const [sexoOpts, setSexoOpts] = useState<Option[]>([]);
@@ -61,6 +65,14 @@ export default function EstudianteForm() {
 
   const celularRegex = useMemo(() => /^(\+56)?\s?9\d{8}$/, []);
   const telefonoRegex = useMemo(() => /^(\+56)?\s?\d{9}$/, []);
+
+  const isPaisOtro = useMemo(() => {
+    const p = String(pais ?? "").toLowerCase().trim();
+    if (p === "otro" || p === "10") return true; // aceptar código 10 como 'Otro'
+    const found = paisOpts.find((o) => String(o.id) === String(pais));
+    if (found && String(found.nombre).toLowerCase().trim() === "otro") return true;
+    return false;
+  }, [pais, paisOpts]);
 
   function formatRut(value: string) {
     const clean = value.replace(/[^0-9kK]/g, "").toUpperCase();
@@ -117,6 +129,36 @@ export default function EstudianteForm() {
   function handleRutBlur() {
     const formatted = formatRut(rut);
     setRut(formatted);
+    if (validateRut(formatted)) {
+      void fetchCuidador(formatted);
+    }
+  }
+
+  async function fetchCuidador(rutFormatted: string) {
+    try {
+      const url = `http://servicios.junaeb.cl/apiv1/servicios/canales-atencion/persona-cuidadora/${encodeURIComponent(
+        rutFormatted
+      )}`;
+      const res = await fetch(url);
+      if (!res.ok) {
+        setCuidador(String(res.status));
+        return;
+      }
+      const data = await res.json();
+      let val: string;
+      if (data === null || data === undefined) val = "";
+      else if (typeof data === "string" || typeof data === "number") val = String(data);
+      else {
+        const obj = data as Record<string, unknown>;
+        if ("resultado" in obj && obj["resultado"] !== undefined) val = String(obj["resultado"]);
+        else if ("esCuidador" in obj && obj["esCuidador"] !== undefined) val = String(obj["esCuidador"]);
+        else val = JSON.stringify(obj);
+      }
+      setCuidador(val);
+    } catch (err) {
+      console.error("Error consultando API cuidador:", err);
+      setCuidador("error");
+    }
   }
 
   function validateAll() {
@@ -132,24 +174,24 @@ export default function EstudianteForm() {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) inv.email = true;
     if (!email2 || email2 !== email) inv.email2 = true;
     if (!nacionalidad) inv.nacionalidad = true;
-    if (nacionalidad === "Chilena") {
+    if (nacionalidad === "1") {
       if (!pueblo) inv.pueblo = true;
     } else {
       if (!pais) inv.pais = true;
-      if (pais && pais.toString().toLowerCase().trim() === "otro" && !paisOtro) inv.paisOtro = true;
+      if (isPaisOtro && !paisOtro) inv.paisOtro = true;
     }
     if (!region) inv.region = true;
     if (!comuna) inv.comuna = true;
     if (!institucion || institucion.trim().length === 0 || institucion.length > 100) inv.institucion = true;
 
     setInvalid(inv);
-    return Object.keys(inv).length === 0;
+    const ok = Object.keys(inv).length === 0;
+    return { ok, inv };
   }
 
-  function handleSubmit(e?: React.FormEvent) {
+  async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
-    const ok = validateAll();
-    if (!ok) return;
+    const { ok, inv } = validateAll();
     const payload = {
       solicitudId,
       rut,
@@ -162,14 +204,37 @@ export default function EstudianteForm() {
       telefono,
       email,
       nacionalidad,
-      pueblo: nacionalidad === "Chilena" ? pueblo : undefined,
-      pais: nacionalidad === "Extranjero" ? (pais && pais.toString().toLowerCase().trim() === "otro" ? paisOtro : pais) : undefined,
+      pueblo: nacionalidad === "1" ? pueblo : undefined,
+      Pais: nacionalidad === "2" ? (isPaisOtro ? "10" : pais) : undefined,
+      OtroPais: nacionalidad === "2" ? (isPaisOtro ? paisOtro : undefined) : undefined,
+      cuidador: cuidador ?? undefined,
       region,
       comuna,
       institucion,
     };
-    console.log("Formulario válido, payload:", payload);
+
+    console.log("Estado validación:", ok, "invalidFields:", Object.keys(inv));
+
+    // Enviar log al backend siempre, aunque falten campos
+    try {
+      await fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objeto: FORM_NAME, action: "siguiente_formulario_attempt", solicitudId, payload, valid: ok, invalidFields: Object.keys(inv) }),
+      });
+    } catch (err) {
+      console.error("No se pudo enviar el log al backend:", err);
+    }
+
+    if (!ok) {
+      // No continuar con envío real si hay errores, pero el intento ya quedó registrado.
+      return;
+    }
+
+    // Aquí podrías proceder con el flujo normal si todo es válido.
   }
+
+  
 
   return (
     <main className="p-6 bg-gray-50 min-h-screen">
@@ -235,7 +300,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Rut estudiante</label>
                 <input
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.rut ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.rut ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={rut}
                   onChange={(e) => setRut(e.target.value)}
                   onBlur={handleRutBlur}
@@ -248,7 +313,7 @@ export default function EstudianteForm() {
                 <label className="block text-sm font-medium text-gray-700">Nombres</label>
                 <input
                   maxLength={100}
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.nombres ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.nombres ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={nombres}
                   onChange={(e) => setNombres(e.target.value)}
                   placeholder="Ingrese sus nombres"
@@ -260,7 +325,7 @@ export default function EstudianteForm() {
                 <label className="block text-sm font-medium text-gray-700">Primer Apellido</label>
                 <input
                   maxLength={50}
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.apellido1 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.apellido1 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={apellido1}
                   onChange={(e) => setApellido1(e.target.value)}
                   placeholder="Ingrese su primer apellido"
@@ -272,7 +337,7 @@ export default function EstudianteForm() {
                 <label className="block text-sm font-medium text-gray-700">Segundo Apellido</label>
                 <input
                   maxLength={50}
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.apellido2 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.apellido2 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={apellido2}
                   onChange={(e) => setApellido2(e.target.value)}
                   placeholder="Ingrese su segundo apellido"
@@ -283,7 +348,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Sexo</label>
                 <select
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.sexo ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.sexo ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={sexo}
                   onChange={(e) => setSexo(e.target.value)}
                   title="Seleccione su sexo"
@@ -300,7 +365,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Género</label>
                 <select
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.genero ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.genero ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={genero}
                   onChange={(e) => setGenero(e.target.value)}
                   title="Seleccione su género"
@@ -317,7 +382,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Edad</label>
                 <select
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.edad ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.edad ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={edad}
                   onChange={(e) => setEdad(e.target.value)}
                   title="Seleccione su edad"
@@ -334,7 +399,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Teléfono / Celular</label>
                 <input
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.telefono ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.telefono ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value)}
                   placeholder="Si es celular utilizar formato +569 y si es fijo indicar el código de la región"
@@ -345,7 +410,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Correo Electrónico</label>
                 <input
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.email ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.email ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Ingrese su correo electrónico"
@@ -356,7 +421,7 @@ export default function EstudianteForm() {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Repita Correo Electrónico</label>
                 <input
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.email2 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.email2 ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={email2}
                   onChange={(e) => setEmail2(e.target.value)}
                   placeholder="Repita su correo electrónico"
@@ -368,75 +433,75 @@ export default function EstudianteForm() {
                 <div className="block text-sm font-medium text-gray-700 mb-2">Nacionalidad</div>
                 <div className="flex items-center gap-6">
                   <label className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="nacionalidad"
-                      value="Chilena"
-                      checked={nacionalidad === "Chilena"}
-                      onChange={() => setNacionalidad("Chilena")}
-                    />
+                      <input
+                        type="radio"
+                        name="nacionalidad"
+                        value="1"
+                        checked={nacionalidad === "1"}
+                        onChange={() => setNacionalidad("1")}
+                      />
                     <span className="text-sm">Chilena</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input
                       type="radio"
                       name="nacionalidad"
-                      value="Extranjero"
-                      checked={nacionalidad === "Extranjero"}
-                      onChange={() => setNacionalidad("Extranjero")}
+                      value="2"
+                      checked={nacionalidad === "2"}
+                      onChange={() => setNacionalidad("2")}
                     />
                     <span className="text-sm">Extranjero</span>
                   </label>
                 </div>
               </div>
 
-              {nacionalidad === "Chilena" ? (
+              {nacionalidad === "1" ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Perteneciente a Pueblos Originarios</label>
-                  <select
-                    className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.pueblo ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
-                    value={pueblo}
-                    onChange={(e) => setPueblo(e.target.value)}
-                    title="-- seleccione --"
-                  > 
-                    {/* <option value="">--Seleccione su pueblo originario--</option> */}
-                    {pueblosOpts.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <label className="block text-sm font-medium text-gray-700">Perteneciente a Pueblos Originarios</label>
+                <select
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.pueblo ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  value={pueblo}
+                  onChange={(e) => setPueblo(e.target.value)}
+                  title="-- seleccione --"
+                > 
+                  {pueblosOpts.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
               ) : (
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">País</label>
                     <select
-                      className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.pais ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                      className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.pais ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                       value={pais}
                         onChange={(e) => setPais(e.target.value)}
                         title="Seleccione su país de origen"
                     >
                       <option value="">- Seleccione su país de origen -</option>
                       {paisOpts.map((o) => (
-                        <option key={o.id} value={o.nombre}>
+                        <option key={o.id} value={o.id}>
                           {o.nombre}
                         </option>
                       ))}
-                      <option value="Otro">Otro</option>
+                      <option value="10">Otro</option>
                     </select>
                   </div>
 
                   <div>
-                    {pais && pais.toString().toLowerCase().trim() === "otro" ? (
+                    {isPaisOtro ? (
                       <>
                         <label className="block text-sm font-medium text-gray-700">Ingrese su país</label>
                         <input
-                          className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.paisOtro ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                          className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.paisOtro ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                           value={paisOtro}
                           onChange={(e) => setPaisOtro(e.target.value)}
                           placeholder="Ingrese su país"
                           title="Ingrese su país"
+
                         />
                       </>
                     ) : (
@@ -450,7 +515,7 @@ export default function EstudianteForm() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Región de Residencia</label>
                   <select
-                    className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.region ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                    className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.region ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                     value={region}
                     onChange={(e) => setRegion(e.target.value)}
                     title="- Seleccione su región de residencia -"
@@ -467,7 +532,7 @@ export default function EstudianteForm() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Comuna de Residencia</label>
                   <select
-                    className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.comuna ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                    className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.comuna ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                     value={comuna}
                     onChange={(e) => setComuna(e.target.value)}
                     title="- Seleccione su comuna de residencia -"
@@ -486,7 +551,7 @@ export default function EstudianteForm() {
                 <label className="block text-sm font-medium text-gray-700">Institución de Educación</label>
                 <input
                   maxLength={100}
-                  className={`mt-1 block w-full rounded-md shadow-sm p-2 border ${invalid.institucion ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
+                  className={`mt-1 block w-full rounded-md shadow-sm p-2 text-gray-800 placeholder-gray-400 border ${invalid.institucion ? "bg-[rgb(255,192,192)] border-red-500" : "border-gray-300"}`}
                   value={institucion}
                   onChange={(e) => setInstitucion(e.target.value)}
                   placeholder="Ingrese el nombre de la institución donde estudia. Si no es beneficiario, indique “No aplica”"

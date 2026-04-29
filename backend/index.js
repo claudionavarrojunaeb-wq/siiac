@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const { Pool } = require("pg");
+const fs = require("fs");
+const path = require("path");
 
 const PORT = Number(process.env.PORT || 3001);
 const ALLOWED_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
@@ -200,3 +202,97 @@ app.get("/api/comunas", async (req, res) => {
     res.status(500).json([]);
   }
 });
+
+// Endpoint para recibir logs desde el frontend y persistirlos en backend/log
+app.post("/api/logs", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const YYYY = now.getFullYear();
+    const MM = pad(now.getMonth() + 1);
+    const DD = pad(now.getDate());
+    const HH = pad(now.getHours());
+    const mm = pad(now.getMinutes());
+    const ss = pad(now.getSeconds());
+    const ms = String(now.getMilliseconds()).padStart(3, "0");
+    const localTimestamp = `${YYYY}-${MM}-${DD}T${HH}:${mm}:${ss}.${ms}`;
+
+    const entry = {
+      timestamp: localTimestamp,
+      objeto: payload.objeto || null,
+      action: payload.action || "siguiente_formulario",
+      solicitudId: payload.solicitudId || null,
+      payload: payload.payload || payload,
+      userAgent: req.headers["user-agent"] || "",
+      ip: req.ip || req.connection?.remoteAddress || "",
+    };
+
+    // Escribir en archivo diario JSONL y en archivo MD resumen (ruta: backend/log/)
+    const dateKey = `${YYYY}${MM}${DD}`; // YYYYMMDD
+    const logDir = path.join(__dirname, "log");
+    if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+
+    const jsonlPath = path.join(logDir, `${dateKey}.jsonl`);
+    const mdPath = path.join(logDir, `${dateKey}.md`);
+
+    // Línea JSONL por entrada
+    const jsonlLine = JSON.stringify(entry) + "\n";
+    fs.appendFile(jsonlPath, jsonlLine, (err) => {
+      if (err) console.error("Error escribiendo JSONL de log:", err);
+    });
+
+    // Línea en MD para trazabilidad humana
+    const mdLine = `${entry.timestamp} : ${entry.action} - solicitudId: ${entry.solicitudId || ""} \n`;
+    fs.appendFile(mdPath, mdLine, (err) => {
+      if (err) console.error("Error escribiendo MD de log:", err);
+    });
+
+    return res.status(201).json({ ok: true });
+  } catch (err) {
+    console.error("Error en /api/logs", err);
+    res.status(500).json({ ok: false });
+  }
+});
+
+// Rotación y compresión de logs antiguos
+function rotateAndCompressLogs() {
+  try {
+    const logDir = path.join(__dirname, "log");
+    if (!fs.existsSync(logDir)) return;
+    const files = fs.readdirSync(logDir);
+    const now = Date.now();
+    const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 días
+    files.forEach((f) => {
+      const m = f.match(/^(\d{8})\.(jsonl|md)$/);
+      if (!m) return;
+      const filePath = path.join(logDir, f);
+      const stats = fs.statSync(filePath);
+      if (now - stats.mtimeMs > maxAge) {
+        const gzPath = filePath + ".gz";
+        if (fs.existsSync(gzPath)) {
+          // ya comprimido: borrar original
+          try { fs.unlinkSync(filePath); } catch (e) { /* ignore */ }
+          return;
+        }
+        const gzip = require("zlib").createGzip();
+        const inp = fs.createReadStream(filePath);
+        const out = fs.createWriteStream(gzPath);
+        inp.pipe(gzip).pipe(out);
+        out.on("finish", () => {
+          try { fs.unlinkSync(filePath); } catch (e) { console.error("Error borrando original tras comprimir:", e); }
+        });
+      }
+    });
+  } catch (err) {
+    console.error("Error en rotateAndCompressLogs:", err);
+  }
+}
+
+// Ejecutar rotación al iniciar y luego cada 24 horas
+try {
+  rotateAndCompressLogs();
+  setInterval(rotateAndCompressLogs, 24 * 60 * 60 * 1000);
+} catch (err) {
+  console.error("No se pudo programar rotación de logs:", err);
+}

@@ -20,6 +20,7 @@ export default defineConfig({
     // el error "Blocked request. This host is not allowed." al abrir el proyecto
     // desde el telefono a traves del enlace externo.
     allowedHosts: ['slimy-shore-vascular.ngrok-free.dev'],
+    
     // El proxy reenvia las peticiones API al backend local para que el navegador, incluido
     // el del telefono a traves de ngrok, consuma datos dinamicos usando el mismo origen HTTP.
     proxy: {
