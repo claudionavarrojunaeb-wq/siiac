@@ -44,6 +44,13 @@ app.use(express.json());
     console.error('No se pudo registrar /api/cuidador:', e);
   }
 
+  try {
+    const logsMod = await import('./routes/logsViewer.js');
+    app.use('/api/logsViewer', logsMod.default);
+  } catch (e) {
+    console.error('No se pudo registrar /api/logsViewer:', e);
+  }
+
 app.get("/api/health", (_request, response) => {
   response.json({ ok: true });
 });
