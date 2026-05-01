@@ -1,11 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+/**
+ * Tipo que representa una coincidencia retornada por el endpoint
+ * `GET /api/logsViewer/search`.
+ *
+ * - `date`: fecha extraída del nombre del fichero (YYYYMMDD).
+ * - `file`: nombre del fichero donde se encontró la línea (ej. 20260501.jsonl).
+ * - `line`: contenido completo de la línea coincidente.
+ * - `index`: índice de línea (0-based) dentro del fichero.
+ *
+ * Este tipo reemplaza el uso de `any` para cumplir con la regla
+ * `@typescript-eslint/no-explicit-any` y proporcionar seguridad
+ * de tipos en el componente.
+ */
+type LogMatch = {
+  date: string;
+  file: string;
+  line: string;
+  index: number;
+};
 
 export default function VerLog() {
   const [dates, setDates] = useState<string[]>([]);
   const [term, setTerm] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [results, setResults] = useState<Array<any>>([]);
+  const [results, setResults] = useState<LogMatch[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
