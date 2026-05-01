@@ -136,28 +136,77 @@ export default function EstudianteForm() {
 
   async function fetchCuidador(rutFormatted: string) {
     try {
-      const url = `http://servicios.junaeb.cl/apiv1/servicios/canales-atencion/persona-cuidadora/${encodeURIComponent(
-        rutFormatted
-      )}`;
+      // Preparar RUT para la API: sin puntos y con guion
+      let apiRut = String(rutFormatted || "").replace(/\./g, "").trim();
+      // Asegurar que tenga guion entre cuerpo y dígito verificador
+      if (!apiRut.includes("-")) {
+        const clean = apiRut.replace(/[^0-9kK]/g, "");
+        if (clean.length > 1) apiRut = clean.slice(0, -1) + "-" + clean.slice(-1);
+      }
+      const url = `/api/cuidador/${encodeURIComponent(apiRut)}`;
+      console.log("fetchCuidador URL (proxy):", url, "apiRut:", apiRut);
       const res = await fetch(url);
-      if (!res.ok) {
-        setCuidador(String(res.status));
+      console.log("fetchCuidador status:", res.status);
+      let json: Record<string, unknown> | null = null;
+      try {
+        json = (await res.json()) as Record<string, unknown> | null;
+      } catch (e) {
+        console.error("fetchCuidador parse error (proxy):", e);
+        setCuidador("0");
         return;
       }
-      const data = await res.json();
-      let val: string;
-      if (data === null || data === undefined) val = "";
-      else if (typeof data === "string" || typeof data === "number") val = String(data);
-      else {
-        const obj = data as Record<string, unknown>;
-        if ("resultado" in obj && obj["resultado"] !== undefined) val = String(obj["resultado"]);
-        else if ("esCuidador" in obj && obj["esCuidador"] !== undefined) val = String(obj["esCuidador"]);
-        else val = JSON.stringify(obj);
+      console.log("fetchCuidador proxy response:", json);
+
+      // Si el proxy indicó fallback explícito, usar cuidador '0'
+      if (json && (json as any).note === 'fallback') {
+        setCuidador('0');
+        return;
       }
-      setCuidador(val);
+
+      if (!res.ok) {
+        setCuidador('0');
+        return;
+      }
+
+      // Extraer solo el indicador numérico de cuidador si está disponible
+      // Estructura esperada (proxy): { ok, status, data: { code, message, time, data: [ { cuidador: 0|1, ... } ] } }
+      if (json && Object.prototype.hasOwnProperty.call(json, "data")) {
+        const d = (json as Record<string, unknown>)["data"] as unknown;
+        if (d && typeof d === "object") {
+          const dobj = d as Record<string, unknown>;
+          // Caso: dobj.data es array con primer elemento que contiene 'cuidador'
+          const inner = dobj["data"];
+          if (Array.isArray(inner) && inner.length > 0 && inner[0] && typeof inner[0] === "object") {
+            const first = inner[0] as Record<string, unknown>;
+            if (Object.prototype.hasOwnProperty.call(first, "cuidador")) {
+              const c = first["cuidador"];
+              const cval = c === null || c === undefined ? "" : String(c);
+              console.log("fetchCuidador extracted cuidador:", cval);
+              setCuidador(cval);
+              return;
+            }
+          }
+          // Caso alternativo: dobj.cuidador directo
+          if (Object.prototype.hasOwnProperty.call(dobj, "cuidador")) {
+            const c = dobj["cuidador"];
+            const cval = c === null || c === undefined ? "" : String(c);
+            console.log("fetchCuidador extracted cuidador (direct):", cval);
+            setCuidador(cval);
+            return;
+          }
+        }
+      }
+
+      // Fallback: guardar representación reducida para trazabilidad
+      try {
+        // Si no encontramos el campo, marcar como fallback
+        setCuidador('0');
+      } catch {
+        setCuidador('0');
+      }
     } catch (err) {
       console.error("Error consultando API cuidador:", err);
-      setCuidador("error");
+      setCuidador("0");
     }
   }
 
@@ -215,12 +264,56 @@ export default function EstudianteForm() {
 
     console.log("Estado validación:", ok, "invalidFields:", Object.keys(inv));
 
+    // Recopilar info del cliente para adjuntar al log (userAgent, navegador, dispositivo, ip pública si está disponible)
+    async function getClientIp(): Promise<string | null> {
+      try {
+        const r = await fetch('https://api.ipify.org?format=json');
+        if (!r.ok) return null;
+        const j = await r.json();
+        return j.ip || null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function getClientInfoSync() {
+      const ua = navigator.userAgent || '';
+      const platform = (navigator as any).platform || '';
+      // Uso de userAgentData cuando está disponible
+      const uaData: any = (navigator as any).userAgentData || null;
+      let browser = '';
+      let browserVersion = '';
+      try {
+        if (uaData && Array.isArray(uaData.brands) && uaData.brands.length > 0) {
+          browser = uaData.brands[0].brand || '';
+          browserVersion = uaData.brands[0].version || '';
+        } else {
+          // heurística simple para nombre y versión
+          const m = ua.match(/(Firefox|Chrome|CriOS|Edg|Safari|OPR|Opera)\/?\s*([0-9\.]+)/i);
+          if (m) {
+            browser = m[1];
+            browserVersion = m[2] || '';
+          }
+        }
+      } catch {
+        browser = '';
+        browserVersion = '';
+      }
+      const uaLower = ua.toLowerCase();
+      const isMobile = /mobi|android|iphone|ipad|phone/i.test(uaLower) || (uaData && uaData.mobile === true);
+      const deviceType = isMobile ? 'mobile' : 'desktop';
+      return { userAgent: ua, platform, browser, browserVersion, deviceType };
+    }
+
+    const clientIp = await getClientIp();
+    const clientInfo = getClientInfoSync();
+
     // Enviar log al backend siempre, aunque falten campos
     try {
       await fetch("/api/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ objeto: FORM_NAME, action: "siguiente_formulario_attempt", solicitudId, payload, valid: ok, invalidFields: Object.keys(inv) }),
+        body: JSON.stringify({ objeto: FORM_NAME, action: "siguiente_formulario_attempt", solicitudId, payload, valid: ok, invalidFields: Object.keys(inv), clientInfo: { ...clientInfo, ip: clientIp } }),
       });
     } catch (err) {
       console.error("No se pudo enviar el log al backend:", err);
@@ -229,6 +322,26 @@ export default function EstudianteForm() {
     if (!ok) {
       // No continuar con envío real si hay errores, pero el intento ya quedó registrado.
       return;
+    }
+
+    // Requerir que se haya consultado/obtenido `cuidador` antes de guardar ciudadano
+    if (!cuidador) {
+      setInvalid({ ...inv, cuidador: true });
+      console.warn('No se guardará ciudadano: falta campo cuidador');
+      return;
+    }
+
+    // Enviar/guardar ciudadano en el backend
+    try {
+      const r = await fetch('/api/ciudadano', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload }),
+      });
+      const jr = await r.json().catch(() => ({}));
+      console.log('ciudadano upsert result:', jr);
+    } catch (e) {
+      console.error('Error guardando ciudadano:', e);
     }
 
     // Aquí podrías proceder con el flujo normal si todo es válido.
@@ -295,7 +408,7 @@ export default function EstudianteForm() {
               </div>
             </div>
 
-            <h2 className="text-lg font-semibold text-center mb-4">Información relacionada al estudiante</h2>
+            <h2 className="text-lg font-semibold text-left mb-4 text-blue-600">Información relacionada al estudiante</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Rut estudiante</label>
