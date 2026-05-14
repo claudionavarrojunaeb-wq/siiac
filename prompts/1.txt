@@ -1,0 +1,23 @@
+FormularioForm parte 1:
+Formularioform debe ser igual a la imagen D:\_SIIAC\frontend\src\features\estudiante\assets\FormularioEstudiante.jpg
+crea cada control de input, todos los inputs son obligatorios:
+- Rut estudiante: debe permitir ingresar el rut chileno, autompletanrlo y validarlo, por ejemplo 128830383 queda como 12.883.038-3
+- Nombres: Input text de largo 100 caracteres
+- Primer Apellido: Input text de largo 50 caracteres
+- Segundo Apellido: Input text de largo 50 caracteres
+- Sexo: Combobox datos desde tabla sexo
+- Género: Combobox datos desde tabla genero
+- Edad: Combobox datos desde tabla edad
+- Teléfono / Celular: Comparar con ^(\+56)?\s?9\d{8}$ y con ^(\+56)?\s?\d{9}$
+- Correo Electrónico: Debe validar que sea un correo electrónico válido
+- Repita Correo Electrónico: debe validar que sea igual al correo electrónico
+- Nacionalidad: Radio button horizontal, opciones Chilena y Extranjero
+- Perteneciente a Pueblos Originarios: Combobox datos desde tabla pueblos. Si el radio button Nacionalidad es Extranjera, 
+Perteneciente a Pueblos Originarios no debe ser visible, en su lugar debe aparecer el como box País datos desde tabla Pais. 
+Si en combobox Pais se elije "Otro", debe aparecer el input de texto "Ingrese su país", com en la imagen D:\_SIIAC\frontend\src\features\estudiante\assets\FormularioEstudiante2.jpg
+- Región de Residencia: Combobox datos desde tabla Region
+- Comuna de Residencia: Combobox datos de tabla Corepa, id de relación tabla provincia (provinciaid). Cuando se seleccione la Región debe desplegar las comunas de la región.
+- Institución de Educación: Input text largo 100 caracteres
+
+Todos los campos son obligartorios, al presionar el botón siguiente debe validar que los controles tengan la información, si en algun input o combobox no se ingresó o no se seleccionó, 
+el control debe quedar con color de fondo rgb(255,192,192)

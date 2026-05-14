@@ -1,0 +1,40 @@
+en EstudianteForm, al hacer click en boton Siguiente, si se cumple que todos los campos visibles están ingresados, 
+almacena la información de los campo sen la tabla ciudadano, si existe el rut, se actualiza la información, 
+considerar como llave el rut sin puntos ni guión ni digito verificador, realizar el casting correspondiente cuando la clumna sea numerico
+
+Columna CiudadanoRut = "rut" del payload sin puntos ni guión ni digito verificador
+Columna CiudadanoDv = digito verificador (numero o letra que está después del guión en el "rut"  del payload)
+Columna CiudadanoNombres = "nombres" sin espacios del payload
+Columna CiudadanoPaterno = "apellido1" sin espacios del payload
+Columna CiudadanoMaterno = "apellido2" sin espacios del payload
+Columna CiudadanoTelefono1 = "telefono" sin espacios del payload
+Columna CiudadanoEmail = "email" sin espacios del payload
+Columna CiudadanoCorepa = "comuna" del payload
+Columna CiudadanoInstitucion = "institucion" sin espacios del payload
+Columna OcupacionId = valor 15 de la tabla ocupacion
+Columna GeneroId = "genero" del payload
+Columna SexoId = "sexo" del payload
+Columna EdadId = "edad" del payload
+Columna PaisId = "pais" del payload si existe, si no existe asignar 1
+NombreCompleto = "nombres" sin espacios + espacio + "apellido1" sin espacios + espacio + "apellido2" sin espacios
+CiudadanoRutGuion = "rut" del payload
+CiudadanoRegion = "region" del payload
+PueblosId = "pueblo" del payload
+CiudadanoOtroTipo = valor ''
+CiudadanoCargoId
+CiudadanoInstitucionId
+CiudadanoNombreOtraInstitucion
+CiudadanoComunaInstitucion
+CiudadanoRegionInstitucion
+CiudadanoTipoInstitucion
+CiudadanoOrigen
+CiudadanoOficinaFap
+CiudadanoPreferenteId
+CiudadanoConsultanteId
+CiudadanoCuidador = "cuidador" del payload
+CiudadanoOtroPais = "OtroPais" sin espacios del payload, si existe
+CiudadanoTipoId = valor 1
+CiudadanoNacionalidad = "nacionalidad"  del payload
+                                                                         |
+
+despues actualiza la tabla solicitud con llave "solicitudId", actualizar el campo CiudadanoRut con  el rut del Ciudadano ingresado sin puntos ni guión ni digito verificador

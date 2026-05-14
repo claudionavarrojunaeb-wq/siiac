@@ -1,0 +1,14 @@
+{
+  "name": "siac-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "start": "npm run dev",
+    "install-all": "npm i --prefix backend && npm i --prefix frontend",
+    "check-md": "node scripts/check_tsx_md.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
