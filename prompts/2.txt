@@ -1,6 +1,6 @@
 en EstudianteForm, al hacer click en boton Siguiente, si se cumple que todos los campos visibles están ingresados, 
 almacena la información de los campo sen la tabla ciudadano, si existe el rut, se actualiza la información, 
-considerar como llave el rut sin puntos ni guión ni digito verificador, realizar el casting correspondiente cuando la clumna sea numerico
+considerar como llave el rut sin puntos ni guión ni digito verificador, realizar el casting correspondiente cuando la columna sea numerico
 
 Columna CiudadanoRut = "rut" del payload sin puntos ni guión ni digito verificador
 Columna CiudadanoDv = digito verificador (numero o letra que está después del guión en el "rut"  del payload)
