@@ -15,7 +15,7 @@ export default defineConfig({
     host: '0.0.0.0',
     // Este puerto coincide con el que ya se venia usando para el entorno local y
     // con el destino que expone el tunel HTTP activo.
-    port: 5173,
+    port: 6174,
     // Se permite de forma explicita el dominio publico actual de ngrok para evitar
     // el error "Blocked request. This host is not allowed." al abrir el proyecto
     // desde el telefono a traves del enlace externo.
