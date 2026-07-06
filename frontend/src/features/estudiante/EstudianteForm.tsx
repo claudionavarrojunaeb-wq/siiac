@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import logo from "../inicio/assets/logo.jpg";
+import { useNavigate } from 'react-router-dom';
 
 interface TokenState {
   __tokenParams?: Record<string, string>;
@@ -8,7 +9,7 @@ interface TokenState {
 
 export default function EstudianteForm() {
   const location = useLocation();
-
+const navigate = useNavigate();
   const FORM_NAME = "EstudianteForm.tsx";
 
   const solicitudId = useMemo<string | null>(() => {
@@ -677,7 +678,8 @@ export default function EstudianteForm() {
               <div className="flex items-center gap-6">
                 <button
                   type="button"
-                  onClick={() => { window.location.href = 'http://localhost:5173/'; }}
+                  onClick={() => navigate('/')}
+                  // onClick={() => { window.location.href = 'http://localhost:6174/'; }}
                   className="inline-flex justify-center items-center w-40 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium text-sm"
                 >
                   Volver
